@@ -49,6 +49,7 @@ import cuchaz.enigma.translation.representation.entry.ClassEntry;
 import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.LocalVariableEntry;
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 import cuchaz.enigma.utils.I18n;
 
@@ -295,6 +296,9 @@ public enum EnigmaMappingsWriter implements MappingsWriter {
 	}
 
 	protected String writeArgument(LocalVariableEntry entry, @Nonnull EntryMapping mapping) {
+		if (entry instanceof LocalVariableIndexEntry local) {
+			return EnigmaFormat.LOCAL + " " + entry.getIndex() + ' ' + mapping.targetName();
+		}
 		return EnigmaFormat.PARAMETER + " " + entry.getIndex() + ' ' + mapping.targetName();
 	}
 

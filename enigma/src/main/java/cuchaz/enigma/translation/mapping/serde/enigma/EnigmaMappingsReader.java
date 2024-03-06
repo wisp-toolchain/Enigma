@@ -33,6 +33,7 @@ import cuchaz.enigma.translation.representation.entry.ClassEntry;
 import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.LocalVariableEntry;
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 import cuchaz.enigma.utils.I18n;
 
@@ -213,6 +214,8 @@ public enum EnigmaMappingsReader implements MappingsReader {
 			return parseMethod(parentEntry, tokens);
 		case EnigmaFormat.PARAMETER:
 			return parseArgument(parentEntry, tokens);
+		case EnigmaFormat.LOCAL:
+			return parseLocal(parentEntry, tokens);
 		case EnigmaFormat.COMMENT:
 			readJavadoc(parent, tokens);
 			return null;
@@ -346,6 +349,18 @@ public enum EnigmaMappingsReader implements MappingsReader {
 
 		MethodEntry ownerEntry = (MethodEntry) parent;
 		LocalVariableEntry obfuscatedEntry = new LocalVariableEntry(ownerEntry, Integer.parseInt(tokens[1]), "", true, null);
+		String mapping = tokens[2];
+
+		return new MappingPair<>(obfuscatedEntry, new RawEntryMapping(mapping));
+	}
+
+	private static MappingPair<LocalVariableIndexEntry, RawEntryMapping> parseLocal(@Nullable Entry<?> parent, String[] tokens) {
+		if (!(parent instanceof MethodEntry)) {
+			throw new RuntimeException("Method arg must be a child of a method!");
+		}
+
+		MethodEntry ownerEntry = (MethodEntry) parent;
+		LocalVariableIndexEntry obfuscatedEntry = new LocalVariableIndexEntry(ownerEntry, Integer.parseInt(tokens[1]), "", false, null);
 		String mapping = tokens[2];
 
 		return new MappingPair<>(obfuscatedEntry, new RawEntryMapping(mapping));

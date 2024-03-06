@@ -25,6 +25,7 @@ import cuchaz.enigma.translation.representation.entry.ClassEntry;
 import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.LocalVariableEntry;
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 
 public final class TinyV2Writer implements MappingsWriter {
@@ -118,11 +119,12 @@ public final class TinyV2Writer implements MappingsWriter {
 		for (EntryTreeNode<EntryMapping> child : node.getChildNodes()) {
 			Entry<?> entry = child.getEntry();
 
-			if (entry instanceof LocalVariableEntry) {
-				writeParameter(writer, child);
+			if (entry instanceof LocalVariableEntry localVariableEntry) {
+				if (localVariableEntry.isArgument())
+					writeParameter(writer, child);
+				else
+					writeLocal(writer, child);
 			}
-
-			// TODO write actual local variables
 		}
 	}
 
@@ -159,6 +161,28 @@ public final class TinyV2Writer implements MappingsWriter {
 
 		writer.print(indent(2));
 		writer.print("p\t");
+		writer.print(((LocalVariableEntry) node.getEntry()).getIndex());
+		writer.print("\t");
+		writer.print(node.getEntry().getName());
+		writer.print("\t");
+		EntryMapping mapping = node.getValue();
+
+		if (mapping == null || mapping.targetName() == null) {
+			writer.println(); // todo ???
+		} else {
+			writer.println(mapping.targetName());
+
+			writeComment(writer, mapping, 3);
+		}
+	}
+
+	private void writeLocal(PrintWriter writer, EntryTreeNode<EntryMapping> node) {
+		if (node.getValue() == null || node.getValue().equals(EntryMapping.DEFAULT)) {
+			return; // Shortcut
+		}
+
+		writer.print(indent(2));
+		writer.print("v\t");
 		writer.print(((LocalVariableEntry) node.getEntry()).getIndex());
 		writer.print("\t");
 		writer.print(node.getEntry().getName());

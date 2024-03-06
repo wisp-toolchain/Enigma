@@ -8,11 +8,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
+
 import org.benf.cfr.reader.bytecode.analysis.loc.HasByteCodeLoc;
 import org.benf.cfr.reader.bytecode.analysis.types.JavaRefTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.JavaTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.MethodPrototype;
 import org.benf.cfr.reader.bytecode.analysis.variables.NamedVariable;
+import org.benf.cfr.reader.bytecode.analysis.variables.NamedVariableFromHint;
 import org.benf.cfr.reader.entities.AccessFlag;
 import org.benf.cfr.reader.entities.ClassFile;
 import org.benf.cfr.reader.entities.ClassFileField;
@@ -87,6 +90,17 @@ public class EnigmaDumper extends StringStreamDumper {
 		int variableIndex = method.getParameterLValues().get(parameterIndex).localVariable.getIdx();
 
 		return new LocalVariableEntry(owner, variableIndex, name, true, null);
+	}
+
+	private LocalVariableIndexEntry getLocalEntry(MethodPrototype method, int parameterIndex, String name) {
+		MethodEntry owner = getMethodEntry(method);
+
+		// params may be not computed if cfr creates a lambda expression fallback, e.g. in PointOfInterestSet
+		if (owner == null || !method.parametersComputed()) {
+			return null;
+		}
+
+		return null;//new LocalVariableIndexEntry(owner, parameterIndex, name, true, null);
 	}
 
 	private FieldEntry getFieldEntry(JavaTypeInstance owner, String name, String desc) {
@@ -285,8 +299,11 @@ public class EnigmaDumper extends StringStreamDumper {
 		return this;
 	}
 
+	private MethodPrototype currentMethod;
+
 	@Override
 	public Dumper parameterName(String name, Object ref, MethodPrototype method, int index, boolean defines) {
+		this.currentMethod = method;
 		super.parameterName(name, ref, method, index, defines);
 		int now = sb.length();
 		Token token = new Token(now - name.length(), now, name);
@@ -309,10 +326,42 @@ public class EnigmaDumper extends StringStreamDumper {
 		return this;
 	}
 
+	private String lastVariable;
+
 	@Override
 	public Dumper variableName(String name, NamedVariable variable, boolean defines) {
+		super.variableName(name, variable, defines);
 		// todo catch var declarations in the future
-		return super.variableName(name, variable, defines);
+		if (!name.equals("this") && variable instanceof NamedVariableFromHint/* && (lastVariable == null || !lastVariable.equals("this"))*/) {
+			int now = sb.length();
+			Token token = new Token(now - name.length(), now, name);
+			Entry<?> entry;
+
+			int slot = -1;
+			try {
+				java.lang.reflect.Field field = NamedVariableFromHint.class.getDeclaredField("slot");
+				field.setAccessible(true);
+				slot = (int) field.get(variable);
+			} catch (NoSuchFieldException | IllegalAccessException e) {
+				throw new RuntimeException(e);
+			}
+
+			if (defines) {
+				refs.put(variable, entry = getLocalEntry(this.currentMethod, slot, name));
+			} else {
+				entry = refs.get(variable);
+			}
+
+			if (entry != null) {
+				if (defines) {
+					this.index.addDeclaration(token, entry);
+				} else {
+					this.index.addReference(token, entry, contextMethod);
+				}
+			}
+		}
+		this.lastVariable = name;
+		return this;
 	}
 
 	@Override

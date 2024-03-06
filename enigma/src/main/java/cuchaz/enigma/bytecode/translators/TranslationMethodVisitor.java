@@ -1,5 +1,7 @@
 package cuchaz.enigma.bytecode.translators;
 
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -140,7 +142,14 @@ public class TranslationMethodVisitor extends MethodVisitor {
 	@Override
 	public void visitLocalVariable(String name, String desc, String signature, Label start, Label end, int index) {
 		signature = translator.translate(Signature.createTypedSignature(signature)).toString();
-		name = translateVariableName(index, name);
+		LocalVariableIndexEntry entry = new LocalVariableIndexEntry(methodEntry, index, "", false, null);
+		LocalVariableEntry translatedEntry = translator.translate(entry);
+		String translatedName = translatedEntry.getName();
+
+		if (!translatedName.isEmpty()) {
+			name = translatedName;
+		}
+
 		desc = translator.translate(new TypeDescriptor(desc)).toString();
 
 		super.visitLocalVariable(name, desc, signature, start, end, index);

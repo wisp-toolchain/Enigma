@@ -22,6 +22,7 @@ import cuchaz.enigma.translation.representation.entry.ClassEntry;
 import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.LocalVariableEntry;
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 
 public final class TinyV2Reader implements MappingsReader {
@@ -34,8 +35,9 @@ public final class TinyV2Reader implements MappingsReader {
 	private static final int IN_FIELD = IN_METHOD + 1;
 	// 2 indent
 	private static final int IN_PARAMETER = IN_FIELD + 1;
+	private static final int IN_LOCAL = IN_PARAMETER + 1;
 	// general properties
-	private static final int STATE_SIZE = IN_PARAMETER + 1;
+	private static final int STATE_SIZE = IN_LOCAL + 1;
 	private static final int[] INDENT_CLEAR_START = {IN_HEADER, IN_METHOD, IN_PARAMETER, STATE_SIZE};
 
 	@Override
@@ -144,7 +146,8 @@ public final class TinyV2Reader implements MappingsReader {
 							holds[IN_PARAMETER] = parseArgument(holds[IN_METHOD], parts, escapeNames);
 							break;
 						case "v": // local variable
-							// TODO add local var mapping
+							state.set(IN_LOCAL);
+							holds[IN_LOCAL] = parseLocal(holds[IN_METHOD], parts, escapeNames);
 							break;
 						case "c": // method javadoc
 							addJavadoc(holds[IN_METHOD], parts);
@@ -282,6 +285,22 @@ public final class TinyV2Reader implements MappingsReader {
 		// tokens[2] is the useless obf name
 
 		LocalVariableEntry obfuscatedEntry = new LocalVariableEntry(ownerMethod, variableIndex, "", true, null);
+
+		if (tokens.length <= 3) {
+			return new MappingPair<>(obfuscatedEntry);
+		}
+
+		String mapping = unescapeOpt(tokens[3], escapeNames);
+		return new MappingPair<>(obfuscatedEntry, new RawEntryMapping(mapping));
+	}
+
+	private MappingPair<LocalVariableEntry, RawEntryMapping> parseLocal(MappingPair<? extends Entry, RawEntryMapping> parent, String[] tokens, boolean escapeNames) {
+		MethodEntry ownerMethod = (MethodEntry) parent.getEntry();
+		int variableIndex = Integer.parseInt(tokens[1]);
+
+		// tokens[2] is the useless obf name
+
+		LocalVariableEntry obfuscatedEntry = new LocalVariableIndexEntry(ownerMethod, variableIndex, "", false, null);
 
 		if (tokens.length <= 3) {
 			return new MappingPair<>(obfuscatedEntry);

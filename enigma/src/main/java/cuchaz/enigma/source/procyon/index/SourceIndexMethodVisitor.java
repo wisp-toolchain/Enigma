@@ -49,6 +49,8 @@ import cuchaz.enigma.translation.representation.entry.ClassEntry;
 import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.LocalVariableDefEntry;
+import cuchaz.enigma.translation.representation.entry.LocalVariableEntry;
+import cuchaz.enigma.translation.representation.entry.LocalVariableIndexEntry;
 import cuchaz.enigma.translation.representation.entry.MethodDefEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 
@@ -162,7 +164,14 @@ public class SourceIndexMethodVisitor extends SourceIndexVisitor {
 			FieldEntry fieldEntry = new FieldEntry(classEntry, ref.getName(), new TypeDescriptor(ref.getErasedSignature()));
 			index.addReference(TokenFactory.createToken(index, node.getIdentifierToken()), fieldEntry, this.methodEntry);
 		} else {
-			this.checkIdentifier(node, index);
+			Variable variable = node.getUserData(Keys.VARIABLE);
+
+			if (variable != null && variable.getOriginalVariable() != null) {
+				VariableDefinition originalVariable = variable.getOriginalVariable();
+				LocalVariableIndexEntry localVariableDefEntry = new LocalVariableIndexEntry(this.methodEntry, originalVariable.getSlot(), variable.getName(), false, null);
+				index.addReference(TokenFactory.createToken(index, node.getIdentifierToken()), localVariableDefEntry, this.methodEntry);
+			} else
+				this.checkIdentifier(node, index);
 		}
 
 		return visitChildren(node, index);
@@ -225,9 +234,7 @@ public class SourceIndexMethodVisitor extends SourceIndexVisitor {
 						int variableIndex = originalVariable.getSlot();
 
 						if (variableIndex >= 0) {
-							MethodDefEntry ownerMethod = EntryParser.parse(originalVariable.getDeclaringMethod());
-							TypeDescriptor variableType = EntryParser.parseTypeDescriptor(originalVariable.getVariableType());
-							LocalVariableDefEntry localVariableEntry = new LocalVariableDefEntry(ownerMethod, variableIndex, initializer.getName(), false, variableType, null);
+							LocalVariableEntry localVariableEntry = new LocalVariableIndexEntry(this.methodEntry, variableIndex, initializer.getName(), false, null);
 							identifierEntryCache.put(identifier.getName(), localVariableEntry);
 							addDeclarationToUnmatched(identifier.getName(), index);
 							index.addDeclaration(TokenFactory.createToken(index, identifier), localVariableEntry);
@@ -238,6 +245,16 @@ public class SourceIndexMethodVisitor extends SourceIndexVisitor {
 		}
 
 		return visitChildren(node, index);
+	}
+
+	@Override
+	public Void visitIdentifier(Identifier node, SourceIndex data) {
+		return super.visitIdentifier(node, data);
+	}
+
+	@Override
+	public Void visitVariableInitializer(VariableInitializer node, SourceIndex data) {
+		return super.visitVariableInitializer(node, data);
 	}
 
 	@Override
