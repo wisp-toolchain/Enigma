@@ -360,7 +360,7 @@ public enum EnigmaMappingsReader implements MappingsReader {
 		}
 
 		MethodEntry ownerEntry = (MethodEntry) parent;
-		LocalVariableIndexEntry obfuscatedEntry = new LocalVariableIndexEntry(ownerEntry, Integer.parseInt(tokens[1]), "", false, null);
+		LocalVariableIndexEntry obfuscatedEntry = new LocalVariableIndexEntry(ownerEntry, Integer.parseInt(tokens[1]), "", false, null, 0, 0, null);
 		String mapping = tokens[2];
 
 		return new MappingPair<>(obfuscatedEntry, new RawEntryMapping(mapping));

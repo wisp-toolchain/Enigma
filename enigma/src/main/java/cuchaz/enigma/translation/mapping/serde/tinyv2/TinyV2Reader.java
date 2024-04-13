@@ -300,7 +300,7 @@ public final class TinyV2Reader implements MappingsReader {
 
 		// tokens[2] is the useless obf name
 
-		LocalVariableEntry obfuscatedEntry = new LocalVariableIndexEntry(ownerMethod, variableIndex, "", false, null);
+		LocalVariableEntry obfuscatedEntry = new LocalVariableIndexEntry(ownerMethod, variableIndex, "", false, null, 0, 0, null);
 
 		if (tokens.length <= 3) {
 			return new MappingPair<>(obfuscatedEntry);

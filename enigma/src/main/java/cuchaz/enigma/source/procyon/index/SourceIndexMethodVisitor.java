@@ -155,23 +155,27 @@ public class SourceIndexMethodVisitor extends SourceIndexVisitor {
 		return visitChildren(node, index);
 	}
 
+
+
 	@Override
 	public Void visitIdentifierExpression(IdentifierExpression node, SourceIndex index) {
 		MemberReference ref = node.getUserData(Keys.MEMBER_REFERENCE);
+
+		Variable variable = node.getUserData(Keys.VARIABLE);
+
+		if (variable != null && variable.getOriginalVariable() != null) {
+			VariableDefinition originalVariable = variable.getOriginalVariable();
+			MethodDefEntry ownerMethod = EntryParser.parse(originalVariable.getDeclaringMethod());
+			LocalVariableIndexEntry localVariableDefEntry = new LocalVariableIndexEntry(ownerMethod, originalVariable.getSlot(), variable.getName(), false, null, originalVariable.getScopeStart(), originalVariable.getScopeEnd(), originalVariable.getVariableType().getSignature());
+			index.addReference(TokenFactory.createToken(index, node.getIdentifierToken()), localVariableDefEntry, ownerMethod);
+		}
 
 		if (ref != null) {
 			ClassEntry classEntry = new ClassEntry(ref.getDeclaringType().getInternalName());
 			FieldEntry fieldEntry = new FieldEntry(classEntry, ref.getName(), new TypeDescriptor(ref.getErasedSignature()));
 			index.addReference(TokenFactory.createToken(index, node.getIdentifierToken()), fieldEntry, this.methodEntry);
 		} else {
-			Variable variable = node.getUserData(Keys.VARIABLE);
-
-			if (variable != null && variable.getOriginalVariable() != null) {
-				VariableDefinition originalVariable = variable.getOriginalVariable();
-				LocalVariableIndexEntry localVariableDefEntry = new LocalVariableIndexEntry(this.methodEntry, originalVariable.getSlot(), variable.getName(), false, null);
-				index.addReference(TokenFactory.createToken(index, node.getIdentifierToken()), localVariableDefEntry, this.methodEntry);
-			} else
-				this.checkIdentifier(node, index);
+			this.checkIdentifier(node, index);
 		}
 
 		return visitChildren(node, index);
@@ -234,7 +238,8 @@ public class SourceIndexMethodVisitor extends SourceIndexVisitor {
 						int variableIndex = originalVariable.getSlot();
 
 						if (variableIndex >= 0) {
-							LocalVariableEntry localVariableEntry = new LocalVariableIndexEntry(this.methodEntry, variableIndex, initializer.getName(), false, null);
+							MethodDefEntry ownerMethod = EntryParser.parse(originalVariable.getDeclaringMethod());
+							LocalVariableEntry localVariableEntry = new LocalVariableIndexEntry(ownerMethod, variableIndex, initializer.getName(), false, null, originalVariable.getScopeStart(), originalVariable.getScopeEnd(), originalVariable.getVariableType().getSignature());
 							identifierEntryCache.put(identifier.getName(), localVariableEntry);
 							addDeclarationToUnmatched(identifier.getName(), index);
 							index.addDeclaration(TokenFactory.createToken(index, identifier), localVariableEntry);
@@ -248,13 +253,27 @@ public class SourceIndexMethodVisitor extends SourceIndexVisitor {
 	}
 
 	@Override
-	public Void visitIdentifier(Identifier node, SourceIndex data) {
-		return super.visitIdentifier(node, data);
-	}
+	public Void visitVariableInitializer(VariableInitializer node, SourceIndex index) {
+		Identifier identifier = node.getNameToken();
+		Variable variable = node.getUserData(Keys.VARIABLE);
 
-	@Override
-	public Void visitVariableInitializer(VariableInitializer node, SourceIndex data) {
-		return super.visitVariableInitializer(node, data);
+		if (variable != null) {
+			VariableDefinition originalVariable = variable.getOriginalVariable();
+
+			if (originalVariable != null) {
+				int variableIndex = originalVariable.getSlot();
+
+				if (variableIndex >= 0) {
+					MethodDefEntry ownerMethod = EntryParser.parse(originalVariable.getDeclaringMethod());
+					LocalVariableEntry localVariableEntry = new LocalVariableIndexEntry(ownerMethod, variableIndex, node.getName(), false, null, originalVariable.getScopeStart(), originalVariable.getScopeEnd(), originalVariable.getVariableType().getSignature());
+					identifierEntryCache.put(identifier.getName(), localVariableEntry);
+					addDeclarationToUnmatched(identifier.getName(), index);
+					index.addReference(TokenFactory.createToken(index, identifier), localVariableEntry, ownerMethod);
+				}
+			}
+		}
+
+		return visitChildren(node, index);
 	}
 
 	@Override

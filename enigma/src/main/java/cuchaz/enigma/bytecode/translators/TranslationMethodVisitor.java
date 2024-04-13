@@ -142,7 +142,7 @@ public class TranslationMethodVisitor extends MethodVisitor {
 	@Override
 	public void visitLocalVariable(String name, String desc, String signature, Label start, Label end, int index) {
 		signature = translator.translate(Signature.createTypedSignature(signature)).toString();
-		LocalVariableIndexEntry entry = new LocalVariableIndexEntry(methodEntry, index, "", false, null);
+		LocalVariableIndexEntry entry = new LocalVariableIndexEntry(methodEntry, index, "", false, null, start.getOffset(), end.getOffset(), desc);
 		LocalVariableEntry translatedEntry = translator.translate(entry);
 		String translatedName = translatedEntry.getName();
 
