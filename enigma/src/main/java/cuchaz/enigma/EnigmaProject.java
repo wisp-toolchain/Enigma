@@ -272,7 +272,17 @@ public class EnigmaProject {
 			progress.init(classes.size(), I18n.translate("progress.classes.decompiling"));
 
 			//create a common instance outside the loop as mappings shouldn't be changing while this is happening
-			Decompiler decompiler = decompilerService.create(compiled::get, new SourceSettings(false, false));
+			Decompiler decompiler = decompilerService.create(new ClassProvider() {
+				@Override
+				public Collection<String> getClassNames() {
+					return compiled.keySet();
+				}
+
+				@Override
+				public ClassNode get(String name) {
+					return compiled.get(name);
+				}
+			}, new SourceSettings(false, false));
 
 			AtomicInteger count = new AtomicInteger();
 
@@ -342,6 +352,8 @@ public class EnigmaProject {
 		}
 
 		public void writeTo(Path path) throws IOException {
+			Files.createDirectories(path.getParent());
+
 			try (BufferedWriter writer = Files.newBufferedWriter(path)) {
 				writer.write(source);
 			}
