@@ -9,7 +9,6 @@ subprojects {
 	apply plugin: 'checkstyle'
 
 	repositories {
-		mavenLocal()
 		mavenCentral()
 		maven { url 'https://maven.fabricmc.net/' }
 	}
